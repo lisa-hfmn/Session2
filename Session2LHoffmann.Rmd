@@ -1,0 +1,128 @@
+---
+title: "Session 2 Lisa Hoffmann"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+BX_Book_Ratings <- read_delim("BX-Book-Ratings.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+BX_Books <- read_delim("BX-Books.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+```
+
+# Aufgabe 1
+
+## Bewertungen pro Publisher
+
+Alle Bücher, die eine Bewertung von 0 in der Tabelle stehen haben, wurden nicht bewertet. Daher habe ich alle Einträge herausgefiltert, die keine Bewertung erhalten haben (Book-Rating = 0).
+
+```{r}
+ratings <- BX_Book_Ratings %>%
+  left_join(BX_Books) %>%
+  filter(`Book-Title` != "NA") %>%
+  filter(`Book-Rating` > 0)
+ratings
+```
+
+```{r}
+BewertungenProPublisher <- ratings %>%
+  group_by(`Publisher`) %>%
+  summarise(Durchschnittsbewertung = mean(`Book-Rating`), AnzahlBew = n()) %>%
+  select(Publisher, AnzahlBew) %>%
+  arrange(desc(AnzahlBew))
+BewertungenProPublisher
+```
+
+## Bücher pro Publisher
+
+Auch hier müssen zunächst alle Bewertung = 0 herausgefiltert werden.
+Der Grund hierfür ist, dass die Bücher herausgefiltert werden müssen, die nur einmal in der Tabelle stehen, und zwar ohne Bewertung.
+Am Ende ist für jedes Buch (ISBN) der Verlag, sowie die Anzahl der Bewertungen aufgelistet.
+
+```{r}
+PublisherOhne0 <- BX_Book_Ratings %>%
+  left_join(BX_Books) %>%
+  filter(`Book-Title` != "NA") %>%
+  filter(`Book-Rating` > 0) %>%
+  group_by(ISBN, Publisher) %>%
+  summarise(Durchschnittsbewertung = mean(`Book-Rating`), AnzahlBew = n())
+PublisherOhne0
+```
+
+
+Die Anzahl der Bücher werden noch pro Publisher gruppiert.
+
+```{r}
+BuecherProPublisher <- PublisherOhne0 %>%
+  group_by(Publisher) %>%
+  summarise(AnzahlBue = n()) %>%
+  filter (Publisher != "NA") %>%
+  arrange(desc(AnzahlBue))
+BuecherProPublisher
+```
+
+
+## Ergebnis
+
+
+
+```{r}
+Ergebnis <- BewertungenProPublisher %>%
+  left_join(BuecherProPublisher) %>%
+  select(AnzahlBue, AnzahlBew)
+Ergebnis
+```
+
+
+```{r}
+fit <- lm(Ergebnis$AnzahlBew ~ Ergebnis$AnzahlBue)
+```
+
+```{r}
+plot(Ergebnis)
+abline(fit)
+```
+
+```{r}
+summary(fit)
+```
+
+## Fazit
+Es besteht eine lineare Beziehung zwischen der Anzahl der Bücher pro Publisher und der Anzahl der Ratings, die die Bücher eines Publishers erhalten. Je mehr Bücher in einem Verlag erschienen sind, desto mehr Bewertungen erhält der Verlag. Dass die lineare Funktion steigt ist logisch, da hier z.B. ein Verlag, der 4000 Bücher veröffentlicht hat, mindestens 4000 Bewertungen bekommen muss (der Wert der Steigung muss mindestens 1 betragen). Ich denke es kommt auch darauf an, wie stark die Steigung der Funktion ist, um überprüfen zu können, ob die Aussage wahr ist. Die Steigung beträgt in diesem Fall 3,39004 und ist somit größer als 1. Der R-Wert liegt bei 0.8105 und ist damit recht gut.
+
+
+
+# Aufgabe 2
+
+
+```{r}
+AlterAnzahl <- BX_Book_Ratings %>%
+  group_by(ISBN) %>%
+  summarise(Durchschnittsbewertung = mean(`Book-Rating`), AnzahlBewertungen = n()) %>%
+  left_join(BX_Books) %>%
+  filter(`Year-Of-Publication` != "NA") %>%
+  select(`Year-Of-Publication`, AnzahlBewertungen)
+AlterAnzahl
+```
+
+```{r}
+plot(AlterAnzahl)
+```
+
+```{r}
+AlterAnzahl2 <- AlterAnzahl %>%
+  filter(`Year-Of-Publication` > 1850)
+plot(AlterAnzahl2)
+```
+
+
+## Fazit
+
+Ältere Bücher haben nicht mehr Ratings, weil sie mehr Zeit haben, um Ratings zu sammeln. Eher gilt das Gegenteil. Je aktueller ein Buch, desto mehr Ratings hat es.
